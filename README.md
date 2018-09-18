@@ -4,4 +4,4 @@ A simple google script that we can run monthly to import prayer event into our c
 ## Using the script
 - Create a google script from a spreadsheet
 - Paste in code.gs
-- create a monthly trigger to run doit() function. Currently I am using only depok.
+- create a daily trigger to run doit() function. Currently I am using only depok.
