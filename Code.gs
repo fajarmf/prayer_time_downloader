@@ -1,42 +1,39 @@
 DEPOK_PRAYER_TIME_CALENDAR = "oh36m4na22s0npc8j7t6kl1ago@group.calendar.google.com";
 
 function doit() {
-  getPrayerTimesKemenag("depok");
+//  getPrayerTimesKemenag("depok");
+  getPrayerTimesSiswadi("Depok");
 }
 
-function addDays(date, days) {
-  var result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-function addMinutes(date, minutes) {
-    return new Date(date.getTime() + minutes*60000);
-}
-function remove_all() {
-  var city = "depok";
+// this needs to be run daily
+// https://gist.github.com/siswadi/b24f13ddc80eb92e0b01a8a595c32433
+function getPrayerTimesSiswadi(city) {
   var calendar = getCalendarForCity(city);
-  calendar.getEvents(new Date("2018-02-01"), addDays(new Date(), 30)).forEach(function(event){
-//    if (event.getTitle() == "asr") {
-      Logger.log(event.getTitle() + "-" + event.getDescription());
-      event.deleteEvent();
-    Utilities.sleep(1000)
-//    }
-  })
-}
+  // e.g. city = Depok or Jakarta or Tokyo
+  var url = "https://time.siswadi.com/pray/" + city;
 
-function registerJakarta() {
-  getPrayerTimes("jakarta");
-//  getCalendarForCity("jakarta").deleteCalendar();
-}
+  var response = UrlFetchApp.fetch(url)
+  Logger.log("response = " + response.getContentText())
+  var responseObject = JSON.parse(response)
+  if (responseObject.data) {
+    var date = responseObject.time.date
+    var prayers = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
+    for (var idx in prayers) {
+      var prayer = prayers[idx]
+      var time = responseObject.data[prayer]
+      var timestamp = new Date(date + "T" + time + ":00+07:00")
+      var endTimestamp = addMinutes(timestamp, 15)
+      Logger.log("prayer " + prayer + " start = " + timestamp + ", end = " + endTimestamp)
 
-function formatDate(date) {
-  return date.replace(/-/g, "/")
-}
-function getKemenagCityId(city) {
-  var mapping = {
-    "depok": "VnYCZQk1UiNTIQBjDDUHMAN3ATVSPVI5UTMGK1c0WmVQMlJmWmJVYwFmVWIMYgNp"
+      if(!isExists(calendar, prayer, timestamp)) {
+        Logger.log("creating event for prayer %s", prayer)
+        calendar.createEvent(prayer, timestamp, endTimestamp);
+        Utilities.sleep(1000)
+      } else {
+        Logger.log("already exists for waktu %s at %s", prayer, timestamp)
+      }
+    }
   }
-  return mapping[city];
 }
 
 function getPrayerTimesKemenag(city) {
@@ -58,6 +55,7 @@ function getPrayerTimesKemenag(city) {
   }
   var response = UrlFetchApp.fetch(url, params)
   var calendar = getCalendarForCity(city);
+  Logger.log("response = " + response.getContentText())
   var dataAll = JSON.parse(response.getContentText());
   for (var tanggal in dataAll.data) {
     if (!dataAll.data.hasOwnProperty(tanggal)) continue;
@@ -80,7 +78,6 @@ function getPrayerTimesKemenag(city) {
     }
   }
 }
-
 
 function getPrayerTimes(city) {
   var now = new Date();
@@ -114,6 +111,34 @@ function isExists(calendar, eventName, time) {
 function capitalize(s) {
     // returns the first letter capitalized + the string from index 1 and out aka. the rest of the string
     return s[0].toUpperCase() + s.substr(1);
+}
+
+function addDays(date, days) {
+  var result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+function addMinutes(date, minutes) {
+    return new Date(date.getTime() + minutes*60000);
+}
+function remove_all() {
+  var city = "depok";
+  var calendar = getCalendarForCity(city);
+  calendar.getEvents(new Date("2018-02-01"), addDays(new Date(), 30)).forEach(function(event){
+      Logger.log(event.getTitle() + "-" + event.getDescription());
+      event.deleteEvent();
+      Utilities.sleep(1000)
+  })
+}
+
+function formatDate(date) {
+  return date.replace(/-/g, "/")
+}
+function getKemenagCityId(city) {
+  var mapping = {
+    "depok": "VnYCZQk1UiNTIQBjDDUHMAN3ATVSPVI5UTMGK1c0WmVQMlJmWmJVYwFmVWIMYgNp"
+  }
+  return mapping[city];
 }
 
 function parseDate(date, time, timezone) {
